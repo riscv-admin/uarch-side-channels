@@ -1,4 +1,4 @@
-# Microarchitecture Side Channels (uSC) SIG
+# Microarchitecture Side Channels (uSC) SIG Charter
 
 The information in this file should be created as part of the group formation and approved by your sponsoring group.  See the [Chairs Best Practices policy](https://docs.google.com/document/d/1rtXskVd7YyFq74tQ2OrInyM_-OQa228R5UZs5Pm3Vz0/) for more details.
 
