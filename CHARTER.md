@@ -1,7 +1,19 @@
 # Microarchitecture Side Channels (uSC) SIG Charter
 
-The information in this file should be created as part of the group formation and approved by your sponsoring group.  See the [Chairs Best Practices policy](https://docs.google.com/document/d/1rtXskVd7YyFq74tQ2OrInyM_-OQa228R5UZs5Pm3Vz0/) for more details.
+The microarchitecture may be vulnerable to information leakage, notably through resource sharing.
+Via side-channel leakage where the victim application, by modifying any state in the processor,
+may expose secret information when the attacker can observe state changes.  Or via covert-channel
+leakage where the attacker tries to actively exfiltrate information.
 
-A good Task Group (TG) charter describes how it achieves filling in a gap defined by the Special Interest Group (SIG) or Committee that spawned it (directly or dotted line). It lists the specific small set of  deliverables it will deliver.
+The Microarchitecture Side Channel (uSC) SIG will analyse -- on an ongoing basis -- the literature,
+propose and develop the RISC-V strategy to prevent microarchitectural information leakage, with an
+initial focus on timing side channels.  Solutions of interest include microarchitectural purges,
+microstructure tagging, leakage resilient functionalities, preventing read-only architectural leakage
+(e.g., performance counters).
 
-A SIG is an extension of a Committee, in that its only deliverables are strategy, gaps, and prioritizations, and helping spawn other SIGs or TGs to fill the gaps. A good SIG charter spells out the small set of topic areas their strategy will address along with its responsibilities as laid out in this bullet.
+The SIG will discuss and propose recommendations on how to evolve the compliance model to include
+extensions with no funcational side effects.
+
+The SIG will develop one or more TG Charters that define one or more of the following items: written
+documentation, threat models, prototype implementations, toolchain support, and compliance suite for a
+RISC-V side channel leakage extension(s) or specification(s).
