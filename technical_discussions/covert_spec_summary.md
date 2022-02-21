@@ -30,7 +30,7 @@ Covert channels:
 - M. Escouteloup, R. Lashermes, J. Fournier, J.-L. Lanet: ["Under the dome: preventing hardware timing information leakage."](https://hal.archives-ouvertes.fr/hal-03351957/document)
 
 Spectre-like vulnerabilities:
-- Paul Kocher, Jann Horn, Anders Fogh, Daniel Genkin, Daniel Gruss, Werner Haas, Mike Hamburg, Moritz Lipp, Stefan Mangard, Thomas Prescher, Michael Schwarz and Yuval Yarom["Spectre Attacks: Exploiting Speculative Execution"](https://spectreattack.com/spectre.pdf)
+- Paul Kocher, Jann Horn, Anders Fogh, Daniel Genkin, Daniel Gruss, Werner Haas, Mike Hamburg, Moritz Lipp, Stefan Mangard, Thomas Prescher, Michael Schwarz and Yuval Yarom: ["Spectre Attacks: Exploiting Speculative Execution"](https://spectreattack.com/spectre.pdf)
 - Jose Rodrigo Sanchez Vicarte, Pradyumna Shome, Nandeeka Nayak, Caroline Trippel, Adam Morrison, David Kohlbrenner, Christopher W. Fletcher. [“Opening Pandora’s Box: A Systematic Study of New Ways Microarchitecture Can Leak Private Data”](https://cs.stanford.edu/people/trippel/pubs/pandora-isca-21.pdf).
 
 
@@ -75,14 +75,14 @@ There are no obvious limitations on the value `x`: it can be negative, small, bi
 Therefore it does not seem to make sense to prevent speculation at the instruction level. For example, the `array1` pointer has no special role in what memory addresses can be read. So, for example, preventing speculation when `array1` points to a sensitive memory region makes no sense.
 
 Possible cases where speculation may be prevented:
-- Instruction based. Duplicate instructions that trigger speculation with a non-speculative mode (cf Randall’s [Ghosting the Spectre](https://cam.lohutok.net/publication/2021-ghosting-the-spectre/ghosting_the_spectre.pdf), or add a speculation barrier instruction.
+- Instruction based. Duplicate instructions that trigger speculation with a non-speculative mode (cf Randal’s [Ghosting the Spectre](https://cam.lohutok.net/publication/2021-ghosting-the-spectre/ghosting_the_spectre.pdf)), or add a speculation barrier instruction.
 - Specific instruction patterns. E.g. a load after a speculated branch is forbidden. => no ISA modification needed (but a non-ISA "design recommandations" instead).
 - Privileges-based. Speculation is disabled in machine/supervisor mode.
 - Address space based. Add a bit in an Address Translation and Protection Register that decide if speculation is allowed. E.g. even ASID => speculation, odd ASID => no speculation.
 
 ## Is speculation prevention necessary ?
 
-There are pure hardware proposals mitigating spectre. I won’t list them all here, and some seems a bit too exotic to be considered with respect to our simplicity requirements.
+There are pure hardware proposals mitigating spectre. I won’t list them all here, and some seems a bit too exotic.
 The one I find the most interesting is Gonzalez *et al.* [Replicating and Mitigating Spectre Attacks on a Open Source
 RISC-V Microarchitecture](https://carrv.github.io/2019/papers/carrv2019_paper_5.pdf). A simplified summary is: speculation is done in a new security domain, with dedicated microstructure with respect to the parent execution flow. If speculation ends to be discarded, the microstructures are purged, if not, they are merged with the parent execution flow. This work can be quite naturally combined with the security domain concept.
 
