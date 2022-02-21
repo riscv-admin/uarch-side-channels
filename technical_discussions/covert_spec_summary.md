@@ -1,11 +1,3 @@
-The first meeting of the uSC occurred last Friday, but I would prefer the discussions to happen in this mailing list so that everybody can participate.
-
-This is the uSC SIG, meaning that our goal is to spawn one or more TG. The TG is the group that will do the actual ISA extension creation.
-Our goal here is to agree on what has to be done in the context of microarchitectural side channels.
-
-The first task that we will try to tackle is how to do covert channels and speculation prevention correctly. I will summarize my view of the consensus on the subject below in order to start from a common vocabulary. I expect you to correct me, propose new ideas or simply state your opinion.
-
-Small digression: you are very welcome to propose other tasks for this SIG, don’t hesitate to do so.
 
 # General considerations
 
