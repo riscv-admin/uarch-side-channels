@@ -48,7 +48,7 @@ A simple example for cache memories: a write-back cache is very costly to purge 
 From an ISA point of view, things are quite simple: we need to explicitly denote the security domains.
 
 - For temporal sharing we need only the domain boundaries: a fence/barrier is sufficient (see `purge` of `fence.t`). At the boundary, the microarchitecture is purged.
-- For spatial sharing, we need a security domain identifier. This value, the taint, is tracked in the microarchitecture in order to share/or not information in microstructures. When the identifier changes, we face a boundary and must purge the microarchitecture.
+- For spatial sharing, we need a security domain identifier. This value, the taint, is tracked in the microarchitecture in order to share, or not, information in microstructures. When the identifier changes, we face a boundary and must purge the microarchitecture.
 
 If we don’t want spatial sharing: all harts must always be in the same security domain.
 
@@ -76,7 +76,7 @@ Therefore it does not seem to make sense to prevent speculation at the instructi
 
 Possible cases where speculation may be prevented:
 - Instruction based. Duplicate instructions that trigger speculation with a non-speculative mode (cf Randal’s [Ghosting the Spectre](https://cam.lohutok.net/publication/2021-ghosting-the-spectre/ghosting_the_spectre.pdf)), or add a speculation barrier instruction.
-- Specific instruction patterns. E.g. a load after a speculated branch is forbidden. => no ISA modification needed (but a non-ISA "design recommandations" instead).
+- Specific instruction patterns. E.g. a load after a speculated branch is forbidden. => no ISA modification needed (but a non-ISA "design recommendations" instead).
 - Privileges-based. Speculation is disabled in machine/supervisor mode.
 - Address space based. Add a bit in an Address Translation and Protection Register that decide if speculation is allowed. E.g. even ASID => speculation, odd ASID => no speculation.
 
@@ -105,7 +105,7 @@ if (x < 256) {
 ```
 
 Ensure with the cost of 1 arithmetic instruction that speculation is safe, preventing both negative and too big values.
-It may be interesting to add instruction for fast bound checking in cases where `array1_size` is not a power of 2.
+It may be interesting to add instructions for fast bound checking in cases where `array1_size` is not a power of 2.
 We may even gain performances in some cases, since if the bound checks fail we can kill the speculative execution instantly.
 
 
