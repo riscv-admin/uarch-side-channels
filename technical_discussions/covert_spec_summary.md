@@ -83,11 +83,11 @@ Possible cases where speculation may be prevented:
 ## Is speculation prevention necessary ?
 
 There are pure hardware proposals mitigating spectre. I won’t list them all here, and some seems a bit too exotic.
-Some examples:
+Some interesting examples:
 - Gonzalez *et al.* [Replicating and Mitigating Spectre Attacks on a Open Source RISC-V Microarchitecture](https://carrv.github.io/2019/papers/carrv2019_paper_5.pdf). A simplified summary is: speculation is done in a new security domain, with dedicated microstructure with respect to the parent execution flow. If speculation ends to be discarded, the microstructures are purged, if not, they are merged with the parent execution flow. This work can be quite naturally combined with the security domain concept.
 - Choudhary *et al.* ["Speculative Privacy Tracking (SPT): Leaking Information From Speculative Execution Without Compromising Privacy."](https://www.cs.tau.ac.il/~mad/publications/micro2021-spt.pdf). How to track and prevent leaky patterns.
 
-This work does not require any ISA modification to mitigate Spectre.
+These works does not require any ISA modification to mitigate Spectre.
 
 ## Memory access control
 
