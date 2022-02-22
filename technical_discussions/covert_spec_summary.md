@@ -76,15 +76,16 @@ Therefore it does not seem to make sense to prevent speculation at the instructi
 
 Possible cases where speculation may be prevented:
 - Instruction based. Duplicate instructions that trigger speculation with a non-speculative mode (cf Randal’s [Ghosting the Spectre](https://cam.lohutok.net/publication/2021-ghosting-the-spectre/ghosting_the_spectre.pdf)), or add a speculation barrier instruction.
-- Specific instruction patterns. E.g. a load after a speculated branch is forbidden. => no ISA modification needed (but a non-ISA "design recommendations" instead).
+- Specific instruction patterns. E.g. a load after a speculated branch is forbidden. => no ISA modification needed (but a non-ISA "design recommendations" instead). See for example Rutvik Choudhary, Jiyong Yu, Christopher Fletcher and Adam Morrison: ["Speculative Privacy Tracking (SPT): Leaking Information From Speculative Execution Without Compromising Privacy."](https://www.cs.tau.ac.il/~mad/publications/micro2021-spt.pdf).
 - Privileges-based. Speculation is disabled in machine/supervisor mode.
 - Address space based. Add a bit in an Address Translation and Protection Register that decide if speculation is allowed. E.g. even ASID => speculation, odd ASID => no speculation.
 
 ## Is speculation prevention necessary ?
 
 There are pure hardware proposals mitigating spectre. I won’t list them all here, and some seems a bit too exotic.
-The one I find the most interesting is Gonzalez *et al.* [Replicating and Mitigating Spectre Attacks on a Open Source
-RISC-V Microarchitecture](https://carrv.github.io/2019/papers/carrv2019_paper_5.pdf). A simplified summary is: speculation is done in a new security domain, with dedicated microstructure with respect to the parent execution flow. If speculation ends to be discarded, the microstructures are purged, if not, they are merged with the parent execution flow. This work can be quite naturally combined with the security domain concept.
+Some examples:
+- Gonzalez *et al.* [Replicating and Mitigating Spectre Attacks on a Open Source RISC-V Microarchitecture](https://carrv.github.io/2019/papers/carrv2019_paper_5.pdf). A simplified summary is: speculation is done in a new security domain, with dedicated microstructure with respect to the parent execution flow. If speculation ends to be discarded, the microstructures are purged, if not, they are merged with the parent execution flow. This work can be quite naturally combined with the security domain concept.
+- Choudhary *et al.* ["Speculative Privacy Tracking (SPT): Leaking Information From Speculative Execution Without Compromising Privacy."](https://www.cs.tau.ac.il/~mad/publications/micro2021-spt.pdf). How to track and prevent leaky patterns.
 
 This work does not require any ISA modification to mitigate Spectre.
 
