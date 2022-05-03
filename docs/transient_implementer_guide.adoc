@@ -1,0 +1,244 @@
+= Transient Execution - Implementer's Security Guide (DRAFT)
+
+== High-level Overview
+
+[%header,cols="1,1,1,1"]
+|===
+| Vulnerability Class
+| Isolate
+| Flush
+| Disable
+
+| Spectre variants mistrain speculative predictors to leak privileged data or manipulate control flow.
+| Isolate predictors to limit the impact of cross-context attacks (provides no protection against same-context attacks). Partitioning, tagging, and buffering are some options for implementing predictor isolation. 
+| Flush predictor state to temporarily disrupt the effect of mistrained predictors. 
+| Disable predictions and training to temporarily fully protect against Spectre class vulnerabilities.
+
+| Meltdown variants take advantage of exceptions that are temporarily suspended during transient execution (speculative or out-of-order), to leak privileged data or overwrite privileged data.
+| Isolate caches (by partitioning, tagging, or buffering) to limit the impact of cross-context attacks. The strongest form of this is an L0 speculation buffer to isolate all transient memory loads from updating the caches.
+| Transient exceptions immediately clear transient microarchitectural state invalidated by the exception (don't wait until the exception is raised on commit). Invalidate L1 data cache (and other caches) to temporarily disrupt the effect of leaked data.
+| Temporarily prevent transient execution (speculative or out-of-order) of any instructions that depend on a load/read/write until permission checks are complete.
+|===
+
+== The Implementer's Dilemma
+
+Many different mitigations have been proposed or implemented for the transient execution vulnerabilities. The challenge for the implementer is deciding which mitigations to adopt, weighing security advantages against performance and area costs, and determining how much is enough for their particular implementation and use case.
+
+* The performance cost of flushing techniques tends to be high (for example, a 90% increase in branch misprediction after a flush), because the performance benefits of speculation and memory caches depend on access to history.
+* The performance cost of isolation techniques tends to be lower than flushing, but the area cost tends to be higher, because they increase usage of microarchitectural state (by partitioning, tagging, or buffering).
+* The performance cost of disabling techniques can be high inside the disabled context, but has no impact outside the disabled context. Disabling techniques can have a positive impact on area, because they reduce usage of microarchitectural state (by temporarily disabling the features that use it).
+
+
+== Impact on Microarchitectural State
+
+The "Variants" and "Targets" in the sections below are brief summaries intented to help implementers understand the threats that make use of microarchitectural states as an attack vector or expose privileged microaritectural states as a target of an attack. These summaries describe known variants, but they aim to be clear about the microarchitectural root causes, in order to support future-proofing against as-yet unknown variants. The "Further reading" section at the end of the document provides links to published works with more information about the vulnerabilities and variants.
+
+The "Recommendations" in the sections below are a collection of options for the implementor to consider. Some options can be combined, while others are mutually incompatible. For example, an implementation that *isolates* branch predictors automatically in the microarchitecture by privilege mode, should not also automatically *flush* branch predictors on a privilege mode change, because isolation and flushing on domain switches are equivalent protections against cross-domain attacks (with different performance and area impacts), so the implementor should choose one or the other (or neither) depending on the architecture requirements and risk tolerance for their specific implementation. On the other hand, an implementation that isolates branch predictors automatically in the microarchitecture should still also provide mechanisms to manually flush predictor state and/or speculation barrier hint instructions, because domain isolation only protects against cross-domain attacks and not against same-domain attacks, so the manual mechanisms are still needed for a comprehensive defense.
+
+=== Branch Target Buffer (BTB)
+
+.Variants:
+* Spectre-BTB (Spectre variant 2) mistrains direct or indirect branches, cross/same-address-space, in-place & out-of-place.
+* SgxPectre exposes TEE secret data (provisioning keys, seal keys, attestation keys) from outside the TEE.
+* Spectre-BTB-SA-IP bypasses mitigations that flush or partition the BTB, used for "speculative type confusion".
+* Spectre-BHB bypasses mitigation techniques that isolate the BTB by security domain, demonstrating that BTB attacks can succeed by mistraining only the BHB.
+
+.Targets:
+* Redirect transient control flow to an arbitrary destination (Branch Target Injection).
+
+.Recommendations:
+* Provide a mechanism to flush BTB history either automatically in the microarchitecture (on privilege mode/address space/hart change) or manually with hint instructions or a custom read/write CSR.
+* Provide a mechanism to isolate the BTB by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions.
+* Provide a mechanism to disable predictions and training for the BTB in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
+* Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches before the barrier to resolve).
+
+=== Branch History Buffer (BHB)
+
+.Variants:
+* Spectre-BTB may mistrain BHB in addition to or instead of BTB.
+* Spectre-BHB mistrains the indirect branch predictor using only the BHB, bypassing mitigations that isolate BTB entries across security domains.
+
+.Targets:
+* Redirect transient control flow to an arbitrary destination (Branch History Injection).
+
+.Recommendations:
+* Provide a mechanism to flush BHB history either automatically in the microarchitecture (on privilege mode/address space/hart change) or manually with hint instructions or a custom read/write CSR.
+* Provide a mechanism to isolate the BHB by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions.
+* Provide a mechanism to disable predictions and training for the BHB in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
+* Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches before the barrier to resolve).
+
+=== Pattern History Table (PHT)
+
+.Variants:
+* Spectre-PHT (Spectre variant 1) mistrains conditional branch prediction, to trigger a transient unauthorized/invalid load, same/cross-address-space, in-place & out-of-place.
+* Spectre variant 1.1 triggers transient unauthorized/invalid store. Spectre variant 1.2 targets arbitrary code execution (by overwriting a return address or code pointer with unauthorized/invalid store).
+* NetSpectre is triggered remotely over the network.
+* SGXSpectre mistrains cross-address-space from outside the TEE.
+
+.Targets:
+* Trigger a transient unauthorized/invalid load.
+* Trigger a transient unauthorized/invalid store.
+
+.Recommendations:
+* Provide a mechanism to flush PHT history either automatically in the microarchitecture (on privilege mode/address space change) or manually with hint instructions or a custom read/write CSR.
+* Provide a mechanism to isolate the PHT by security domain, either automatically in the microarchitecture (by privilege mode/address space), or manually with hint instructions.
+* Provide a mechanism to disable predictions and training for the PHT in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
+* Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches before the barrier to resolve).
+
+=== Return Stack Buffer (RSB)
+
+.Variants:
+* Spectre-RSB mistrains the RSB, by transiently executing call instructions (to add invalid entries to the RSB) or explicitly overwriting return addresses, same/cross-address-space, in-place & out-of-place
+
+.Targets:
+* Divert return control flow to code gadget.
+* Examples: untrusted code escaping a sandbox, or leaking secrets from a TEE.
+
+.Recommendations:
+* Provide a mechanism to flush RSB history either automatically in the microarchitecture (on privilege mode/address space change) or manually with hint instructions or a custom read/write CSR.
+* Provide a mechanism to isolate the RSB by security domain, either automatically in the microarchitecture (by privilege mode/address space), or manually with hint instructions.
+* Provide a mechanism to disable predictions and training for the RSB in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
+* Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches or returns before the barrier to resolve).
+
+=== Memory disambiguator
+
+.Variants:
+* Spectre-STL mistrains the memory disambiguator to predict that a load does not depend on prior stores.
+
+.Targets:
+* Read stale values from L1 data cache.
+* Stale pointer values may also break type safety and memory safety guarantees.
+
+.Recommendations:
+* Provide a speculation barrier hint instruction. Loads after the barrier instruction will not speculate past or receive load data from stores before the barrier instruction.
+* Provide an L0 speculation cache, that holds values for transient memory loads, so L1 and other caches are not updated until after the load commits.
+* Provide a mechanism to isolate the memory disambiguator by security domain, either automatically in the microarchitecture (by privilege mode/address space), or manually with hint instructions or a custom read/write CSR.
+* Provide a mechanism to flush the memory disambiguator history manually, either with hint instructions or using a custom read/write CSR.
+* Provide a mechanism to disable predictions and training for the memory disambiguator within a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
+
+
+=== L1 data cache
+
+.Variants:
+* Spectre-STL reads stale values from L1.
+* Spectre-BTB, Spectre-BHB, Spectre-PHT, and Spectre-RSB use the L1 data cache as a transient storage location as an attack vector for code gadgets to extract transient privileged data.
+* Meltdown can extract transient privileged data from L1 data cache.
+
+.Recommendations:
+* Avoid transient updates to the L1 data cache entirely, so it only updates after any transient execution has committed. For example, an L0 speculation buffer holds the values of transient memory loads, and only updates the L1 cache after the transient memory load has committed.
+* Provide a mechanism to manually invalidate the L1 data cache.
+
+=== L2 cache
+
+.Recommendations:
+* Provide a mechanism to manually invalidate the L2 data cache.
+
+=== Uncached memory
+
+.Variants:
+* Meltdown (original variant, but not Foreshadow variants) can extract transient privileged data directly from uncached memory.
+
+.Recommendations:
+* See the recommendations for "page table protection attributes".
+* Memory protection features can also help, if they are enforced transiently. (If memory protection features aren't enforced transiently, they will be vulnerable to a variant of Meltdown, Meltdown-RW, or Meltdown-PK.) 
+
+=== page table protection attributes
+
+.Variants:
+* Meltdown (original variant) triggers a transient page fault (violating the "user/supervisor" permission bit) by loading from an unauthorized kernel address. Since the exception is suspended until commit, privileged data is transiently accessed from cache or memory before the exception is raised to clean up the transient state.
+* Meltdown-P/L1TF: Foreshadow clears the page table present bit, so page fault exceptions that would normally be silenced in SGX enclaves are raised, enabling a Meltdown attack via the L1 data cache (including fetching arbitrary enclave pages into the L1 cache). Foreshadow-NG is the same, but targets OS and hypervisor isolation, and Foreshadow-VMM allows an untrusted VM to extract the host’s entire L1 data cache.
+* Meltdown-RW triggers a transient page fault violating the "read/write" page-table attribute. Transiently overwrites read-only data, bypassing software-based sandboxes.
+* Meltdown-PK triggers a transient page fault violating memory-protection keys. Transiently accesses read/write protected memory.
+
+.Targets:
+* Read kernel memory from user space (Supervisor-only Bypass).
+* Read TEE, VM, or host memory from any domain that shares the same L1 cache (Virtual Translation Bypass).
+* Write to read-only memory (Read-only Bypass).
+* Read or write protected memory (Protection Key Bypass).
+
+.Recommendations:
+* Ensure that transient exceptions immediately clear (or never create) microarchitectural state that could be accessed transiently. Don't wait until the commit stage (doing cleanup only after the exception is raised), because transient instructions can operate on transient microarchitectural state.
+* Ensure that instructions dependent on transient memory loads cannot execute until permission checks are complete.
+
+=== Privileged system registers
+
+.Variants:
+* Meltdown-GP triggers a transient general protection fault by accessing a privileged system register. Since the exception is suspended until commit, the privileged data is transiently accessed before the exception is raised.
+
+.Targets:
+* Unauthorized access to privileged system registers (System Register Bypass).
+
+.Recommendations:
+* Ensure that transient exceptions immediately clear (or never create) microarchitectural state that could be accessed transiently. Don't wait until the commit stage (doing cleanup only after the exception is raised), because transient instructions can operate on transient microarchitectural state.
+* Ensure that instructions dependent on transient privileged system register reads cannot execute until permission checks are complete.
+
+=== FPU registers
+
+.Variants:
+* LazyFP (Meltdown-NM) triggers a transient “device not available” exception for the FPU, by issuing an FPU instruction after a context switch. Since the exception is suspended until commit, FPU register contents from the previous context are transiently accessed before the exception is raised.
+
+.Targets:
+* Read FPU registers from a different (unauthorized) context (FPU Register Bypass).
+
+.Recommendations:
+* Ensure that transient exceptions immediately clear (or never create) microarchitectural state that could be accessed transiently. Don't wait until the commit stage (doing cleanup only after the exception is raised), because transient instructions can operate on transient microarchitectural state.
+* Ensure that instructions dependent on transient FPU register/vector CSR reads cannot execute until permission checks are complete.
+
+=== Array bounds checking
+
+.Variants
+* Meltdown-BR triggers a transient "bound range exceeded" exception (on architectures that have such a feature) by accessing an out-of-bounds array index. Since the exception is suspended until commit, out-of-bounds data is transiently accessed before the exception is raised.
+
+.Targets:
+* Access out-of-bounds secrets, which may never be architecturally visible (Bounds Check Bypass).
+
+.Recommendations:
+* The general rule applies: ensure that transient exceptions immediately clear (or never create) microarchitectural state that could be accessed transiently. Dont wait until the commit stage (doing cleanup only after the exception is raised), because transient instructions can operate on transient microarchitectural state.
+
+== Further reading (grouped by variant)
+
+.Foreshadow:
+* "https://www.usenix.org/conference/usenixsecurity18/presentation/bulck[Foreshadow: Extracting the Keys to the Intel SGX Kingdom with Transient Out-of-Order Execution]"
+
+.Foreshadow-NG:
+* "https://foreshadowattack.eu/foreshadow-NG.pdf[Foreshadow-NG: Breaking the Virtual Memory Abstraction with Transient Out-of-Order Execution]"
+
+.LazyFP (Meltdown-NM):
+* "http://arxiv.org/abs/1806.07480[LazyFP: Leaking FPU Register State using Microarchitectural Side-Channels]"
+
+.Meltdown (original variant):
+* "https://www.usenix.org/conference/usenixsecurity18/presentation/lipp[Meltdown: Reading Kernel Memory from User Space]"
+* "https://googleprojectzero.blogspot.com/2018/01/reading-privileged-memory-with-side.html[Reading Privileged memory with a side-channel]"
+
+.Meltdown-BR:
+* "http://doi.acm.org/10.1145/3214292.3214297[Spectres, Virtual Ghosts, and Hardware Support]" (miscategorizes as a branch predictor attack)
+* "http://arxiv.org/abs/1811.05441[A Systematic Evaluation of Transient Execution Attacks and Defenses]"
+
+.Meltdown-PK:
+* "http://arxiv.org/abs/1811.05441[A Systematic Evaluation of Transient Execution Attacks and Defenses]"
+
+.Meltdown-RW:
+* "http://arxiv.org/abs/1807.03757[Speculative Buffer Overflows: Attacks and Defenses]"
+
+.Spectre-BHB:
+* "https://www.vusec.net/projects/bhi-spectre-bhb/[Branch History Injection: On the Effectiveness of Hardware Mitigations Against Cross-Privilege Spectre-v2 Attacks]" (to appear in August 2022 USENIX Security Symposium)
+
+.Spectre-BTB (Spectre variant 2):
+* "https://doi.org/10.1145/3399742[Spectre attacks: Exploiting speculative execution]" (or http://arxiv.org/abs/1801.01203[original arXiv.org publication])
+* "https://www.intel.com/content/dam/develop/external/us/en/documents/retpoline-a-branch-target-injection-mitigation.pdf[Retpoline: A Branch Target
+Injection Mitigation]"
+* "https://doi.org/10.1109/HPCA.2019.00058[BRB: Mitigating Branch Predictor Side-Channels]"
+
+.Spectre-PHT (Spectre variant 1):
+* "https://doi.org/10.1145/3399742[Spectre attacks: Exploiting speculative execution]" (or http://arxiv.org/abs/1801.01203[original arXiv.org publication])
+* "http://arxiv.org/abs/1807.03757[Speculative Buffer Overflows: Attacks and Defenses]"
+
+.Spectre-RSB:
+* "http://arxiv.org/abs/1807.10364[ret2spec: Speculative Execution Using Return Stack Buffers]"
+* "https://www.usenix.org/conference/woot18/presentation/koruyeh[Spectre Returns! Speculation Attacks using the Return Stack Buffer]"
+
+.Spectre-STL (Spectre variant 4):
+* "https://bugs.chromium.org/p/project-zero/issues/detail?id=1528[speculative execution, variant 4: speculative store bypass]"
+* "https://developer.amd.com/wp-content/resources/124441_AMD64_SpeculativeStoreBypassDisable_Whitepaper_final.pdf[AMD Speculative Store Bypass Disable]"
+
+
