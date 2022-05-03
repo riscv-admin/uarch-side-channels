@@ -10,13 +10,13 @@
 | Disable
 
 | Spectre variants mistrain speculative predictors to leak privileged data or manipulate control flow.
-| Isolate predictors to limit the impact of cross-context attacks (provides no protection against same-context attacks). Partitioning, tagging, and buffering are some options for implementing predictor isolation. 
-| Flush predictor state to temporarily disrupt the effect of mistrained predictors. 
+| Isolate predictors to limit the impact of cross-context attacks (provides no protection against same-context attacks). Partitioning, tagging, and buffering are some options for implementing predictor isolation. Isolate caches (by partitioning, tagging, or buffering) to limit the impact of cross-context attacks. One strong form of cache isolation is an L0 speculation buffer to prevent all transient memory loads from updating the caches.
+| Flush predictor state to temporarily disrupt the effect of mistrained predictors. Invalidate L1 data cache (and other caches) to temporarily disrupt the effect of leaked data.
 | Disable predictions and training to temporarily fully protect against Spectre class vulnerabilities.
 
 | Meltdown variants take advantage of exceptions that are temporarily suspended during transient execution (speculative or out-of-order), to leak privileged data or overwrite privileged data.
-| Isolate caches (by partitioning, tagging, or buffering) to limit the impact of cross-context attacks. The strongest form of this is an L0 speculation buffer to isolate all transient memory loads from updating the caches.
-| Transient exceptions immediately clear transient microarchitectural state invalidated by the exception (don't wait until the exception is raised on commit). Invalidate L1 data cache (and other caches) to temporarily disrupt the effect of leaked data.
+| Isolating transient microarchiectural state can help limit the impact of cross-context attacks, but it isn't an adequate substitute for flushing and disabling techniques.
+| Transient exceptions immediately clear transient microarchitectural state invalidated by the exception (don't wait until the exception is raised on commit). 
 | Temporarily prevent transient execution (speculative or out-of-order) of any instructions that depend on a load/read/write until permission checks are complete.
 |===
 
