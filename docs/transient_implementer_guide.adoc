@@ -15,18 +15,21 @@
 | Disable predictions and training to temporarily fully protect against Spectre class vulnerabilities.
 
 | Meltdown variants take advantage of exceptions that are temporarily suspended during transient execution (speculative or out-of-order), to leak privileged data or overwrite privileged data.
-| Isolating transient microarchiectural state can help limit the impact of cross-context attacks, but it isn't an adequate substitute for flushing and disabling techniques.
+| Isolate shared microarchitectural state to limit the impact of cross-context attacks. Avoid transient updates to shared microarchitectural state, such as L1 data cache and other caches.
 | Transient exceptions immediately clear transient microarchitectural state invalidated by the exception (don't wait until the exception is raised on commit). 
 | Temporarily prevent transient execution (speculative or out-of-order) of any instructions that depend on a load/read/write until permission checks are complete.
 |===
 
 == The Implementer's Dilemma
 
-Many different mitigations have been proposed or implemented for the transient execution vulnerabilities. The challenge for the implementer is deciding which mitigations to adopt, weighing security advantages against performance and area costs, and determining how much is enough for their particular implementation and use case.
+Many different mitigations have been proposed or implemented for the transient execution vulnerabilities. The challenge for the implementer is deciding which mitigations to adopt, weighing security advantages against performance, area, and power costs, and determining how much security is enough for their particular implementation and use case.
 
 * The performance cost of flushing techniques tends to be high (for example, a 90% increase in branch misprediction after a flush), because the performance benefits of speculation and memory caches depend on access to history.
 * The performance cost of isolation techniques tends to be lower than flushing, but the area cost tends to be higher, because they increase usage of microarchitectural state (by partitioning, tagging, or buffering).
-* The performance cost of disabling techniques can be high inside the disabled context, but has no impact outside the disabled context. Disabling techniques can have a positive impact on area, because they reduce usage of microarchitectural state (by temporarily disabling the features that use it).
+* The performance cost of disabling techniques can be high inside the disabled context, but has no impact outside the disabled context. Disabling techniques can have a positive impact on area, because they reduce usage of microarchitectural state (by temporarily disabling the features that use it), and can also have a positive impact on power, because they eliminate mispredicted execution.
+* Automatic microarchitectural mitigation techniques involving flushing or isolation are generally limited to protecting against cross-context attacks. So, it is desirable to combine automatic microarchitectural techniques with manual techniques, to support same-context mitigations. (Automatic microarchitecural *disabling* techniques do not need to be combined with manual techniques, because they completely protect against both cross-context and same-context attacks within the security domain where they are applied.)
+* Manual mitigation techniques, such as hint instructions or custom CSRs, are prone to user error. It is very difficult to guarantee that hint instructions (or writes to custom CSRs) have been inserted in all the right places throughout the entire software stack (kernel, OS, application, hypervisor, etc) to adequately protect against the transient execution vulnerabilities. So, it is desirable to combine manual techniques with automatic microarchtectural techniques, to limit the impact of attacks when they slip past (inconsistently applied) manual software mitigations.
+* Speculation barrier hint instructions are prone to race conditions, so they can be vulnerable to leaking privileged microarchitectural state created after the barrier, through code gadgets or malicious transient instructions that were set in motion before the barrier. So, speculation barrier hint instructions aren't a reliable mitigation techniques.
 
 
 == Impact on Microarchitectural State
@@ -48,7 +51,7 @@ The "Recommendations" in the sections below are a collection of options for the 
 
 .Recommendations:
 * Provide a mechanism to flush BTB history either automatically in the microarchitecture (on privilege mode/address space/hart change) or manually with hint instructions or a custom read/write CSR.
-* Provide a mechanism to isolate the BTB by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions.
+* Provide a mechanism to isolate the BTB by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart/vm/process/sandbox), or manually with hint instructions.
 * Provide a mechanism to disable predictions and training for the BTB in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
 * Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches before the barrier to resolve).
 
@@ -63,7 +66,7 @@ The "Recommendations" in the sections below are a collection of options for the 
 
 .Recommendations:
 * Provide a mechanism to flush BHB history either automatically in the microarchitecture (on privilege mode/address space/hart change) or manually with hint instructions or a custom read/write CSR.
-* Provide a mechanism to isolate the BHB by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions.
+* Provide a mechanism to isolate the BHB by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart/vm/process/sandbox), or manually with hint instructions.
 * Provide a mechanism to disable predictions and training for the BHB in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
 * Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches before the barrier to resolve).
 
@@ -81,7 +84,7 @@ The "Recommendations" in the sections below are a collection of options for the 
 
 .Recommendations:
 * Provide a mechanism to flush PHT history either automatically in the microarchitecture (on privilege mode/address space change) or manually with hint instructions or a custom read/write CSR.
-* Provide a mechanism to isolate the PHT by security domain, either automatically in the microarchitecture (by privilege mode/address space), or manually with hint instructions.
+* Provide a mechanism to isolate the PHT by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart/vm/process/sandbox), or manually with hint instructions.
 * Provide a mechanism to disable predictions and training for the PHT in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
 * Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches before the barrier to resolve).
 
@@ -96,7 +99,7 @@ The "Recommendations" in the sections below are a collection of options for the 
 
 .Recommendations:
 * Provide a mechanism to flush RSB history either automatically in the microarchitecture (on privilege mode/address space change) or manually with hint instructions or a custom read/write CSR.
-* Provide a mechanism to isolate the RSB by security domain, either automatically in the microarchitecture (by privilege mode/address space), or manually with hint instructions.
+* Provide a mechanism to isolate the RSB by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart/vm/process/sandbox), or manually with hint instructions.
 * Provide a mechanism to disable predictions and training for the RSB in a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
 * Provide a manual speculation barrier hint instruction. Instructions after the barrier instruction do not execute transiently (they wait for any branches or returns before the barrier to resolve).
 
@@ -112,7 +115,7 @@ The "Recommendations" in the sections below are a collection of options for the 
 .Recommendations:
 * Provide a speculation barrier hint instruction. Loads after the barrier instruction will not speculate past or receive load data from stores before the barrier instruction.
 * Provide an L0 speculation cache, that holds values for transient memory loads, so L1 and other caches are not updated until after the load commits.
-* Provide a mechanism to isolate the memory disambiguator by security domain, either automatically in the microarchitecture (by privilege mode/address space), or manually with hint instructions or a custom read/write CSR.
+* Provide a mechanism to isolate the memory disambiguator by security domain, either automatically in the microarchitecture (by privilege mode/address space/hart/vm/process/sandbox), or manually with hint instructions or a custom read/write CSR.
 * Provide a mechanism to flush the memory disambiguator history manually, either with hint instructions or using a custom read/write CSR.
 * Provide a mechanism to disable predictions and training for the memory disambiguator within a specific security domain, either automatically in the microarchitecture (by privilege mode/address space/hart), or manually with hint instructions or a custom read/write CSR.
 
