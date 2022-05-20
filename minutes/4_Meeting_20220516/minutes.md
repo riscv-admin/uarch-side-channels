@@ -3,6 +3,8 @@
 This meeting was a continuation of the previous conversations, focusing on speculation attacks.
 
 - Bill presented himself: participating to meetings to see compatibility and needs wrt SAIL models.
+- Ronan summarized email conversation with [VRoom! project](https://moonbaseotago.github.io/talk/index.html#/30), and their approach to covert channels and speculation attacks.
+- We identified additional people we'd like to invite as guests to future meetings, to talk about their approaches, including OpenTitan & BOOM. Chairs took AI to reach out and invite people.
 
 ## How are we going to test security conformance ?
 
@@ -11,7 +13,7 @@ For covert channels: an [academic test suite](https://gitlab.inria.fr/rlasherm/t
 Something similar may be doable for speculation attacks, starting from the [doc here](https://github.com/riscv-admin/uarch-side-channels/blob/main/docs/transient_implementer_guide.adoc). Need to contact BOOM authors to see if they have a security test suite.
 These tools are very limited: we test only the security vulnerabilities that we already know + the tests will need to be (probably) adapted to each hardware implementation. Still, this is a step in the right direction.
 
-## Speculations barriers
+## Speculation barriers
 
 We identified several problems with speculation barriers as they are currently used.
 - The performance cost is probably unnecessarily high: it "stops" speculation even for execution flows not related to the leaking gadget.
@@ -23,7 +25,7 @@ Speculation barriers are not necessary, it is possible to have secure speculatio
 
 Two alternatives are considered below.
 
-## Speculations mode
+## Speculation disable
 
 We may need to completely disable speculation in some security contexts (e.g. no speculation for machine mode, for TEE execution, etc.).
 
