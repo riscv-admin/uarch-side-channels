@@ -6,9 +6,11 @@ For the purpose of initiating a RISC-V Task group on security domains, this docu
 
 Microarchitectural covert channels are malicious communication channels built upon microarchitectural states (caches, branch predictors, prefetchers, etc.).
 In order to prevent covert channels, the hardware must know when states can be shared and when isolation must be ensured instead.
-But this decision is part of the application logic. As a consequence, the ISA must be extended for the software to communicate the security constraints to the hardware.
+But this decision is part of the application logic. The hardware cannot guess by itself that a server application needs to isolate the various users currently being served for example.
+As a consequence, the ISA must be extended for the software to communicate the security constraints to the hardware.
 
-As a strategy, we would like a solution independent of the hardware implementation: dealing with all the possible microarchitectural components that could support covert channels is not sustainable.
+As a strategy, we would like a unified solution capable of supporting multiple hardware implementations.
+The current approach to side-channel attacks involves individual mitigations for each microarchitectural component that could support covert channels, but this proliferation of idiosyncratic and sometimes incompatible mitigations is not sustainable.
 
 ## Summary of the considered technical solution
 
@@ -18,16 +20,20 @@ When the system switches to a new security domain, the microarchitecture must ac
 
 ## Frequently Asked Questions
 
-1. Why add a new kind of context (security domains) and not rely instead on the existing context such as processes ?
+1. Why add a new kind of context (security domains) and not rely instead on the existing context called a "process" ?
 
 Indeed, the privileged specification defines the Address-Space Identifier (ASID) in order to speedup context switching for virtual memory.
 But this solution would have important drawbacks since security domains and address spaces are not the same thing.
-    - Some systems without virtual memory may desire to use security domains (secure microcontroller mainly).
+
+    - Some systems without virtual memory may desire to use security domains (secure microcontrollers mainly).
     - The application may want to isolate part of a program in the same address space. Basically, any part of the application that depends on user input or data can be used to maliciously impact microarchitectural states. In some cases (e.g. Spectre-PHT), this can be used to read a secret value in the same process. We need state isolation inside the same process.
+
+The hardware should implement both kinds of isolation: memory isolation with virtual memory and microarchitectural state isolation with security domains, and will be more secure because it has both. These two mechanisms are mostly orthogonal.
 
 2. Can a security domain span several address spaces ?
 
-No, we do not plan to address this without a compelling use case. The main target of security domains is microarchitectural state isolation. In most cases we do not have several address spaces in the same core.
+It is totally possible to change the ASID, or the virtual memory mapping while staying in the same security domain. In this case, covert channels could be built between the programs in the two address spaces.
+Address spaces and security domains are orthogonal concepts.
 
 ## Anticipated difficulties
 
@@ -42,7 +48,7 @@ This point needs to be further discussed in the uSC-SIG.
 Our initial production objectives include:
 
 1. a small ISA extension.
-2. Security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
+2. a security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
 3. An implementation guide, focusing on the principles of microarchitecture design that enable protection against covert channels. -> intended for hardware engineers.
 4. A proof-of-concept implementation.
 5. A test strategy guide, including a test suite for common covert channels.
