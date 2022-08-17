@@ -25,8 +25,8 @@ When the system switches to a new security domain, the microarchitecture must ac
 Indeed, the privileged specification defines the Address-Space Identifier (ASID) in order to speedup context switching for virtual memory.
 But this solution would have important drawbacks since security domains and address spaces are not the same thing.
 
-    - Some systems without virtual memory may desire to use security domains (secure microcontrollers mainly).
-    - The application may want to isolate part of a program in the same address space. Basically, any part of the application that depends on user input or data can be used to maliciously impact microarchitectural states. In some cases (e.g. Spectre-PHT), this can be used to read a secret value in the same process. We need state isolation inside the same process.
+- Some systems without virtual memory may desire to use security domains (secure microcontrollers mainly).
+- The application may want to isolate part of a program in the same address space. Basically, any part of the application that depends on user input or data can be used to maliciously impact microarchitectural states. In some cases (e.g. Spectre-PHT), this can be used to read a secret value in the same process. We need state isolation inside the same process.
 
 The hardware should implement both kinds of isolation: memory isolation with virtual memory and microarchitectural state isolation with security domains, and will be more secure because it has both. These two mechanisms are mostly orthogonal.
 
