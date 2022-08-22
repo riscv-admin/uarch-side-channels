@@ -1,0 +1,65 @@
+\documentclass[11pt]{beamer}
+%\usetheme{Singapore}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+%\author{}
+%\title{}
+%\setbeamercovered{transparent} 
+\setbeamertemplate{navigation symbols}{} 
+%\logo{} 
+%\institute{} 
+%\date{} 
+%\subject{} 
+\begin{document}
+
+%\begin{frame}
+%\titlepage
+%\end{frame}
+
+%\begin{frame}
+%\tableofcontents
+%\end{frame}
+
+\begin{frame}{Name propositions}
+\begin{itemize}
+    \item \textbf{secdom}: security domains.
+    \item \textbf{spansec}: security span.
+    \item \textbf{scspan}: side-channels span or security context span.
+    \item \textbf{uspan} / \textbf{mspan}: microarchitecture spans.
+    \item \ldots
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Charter proposition}
+    \begin{block}{}
+        \begin{small}
+Timing covert channels are used to exfiltrate confidential data using microarchitectural states as a medium for communications.
+These channels are particularly relevant in the context of microarchitectural attacks such as Spectre and Meltdown.
+
+
+The security domains task group (proposed short name: secdom TG) will define a small ISA extension to prevent malicious covert channels.
+More precisely, we will introduce a notion of security domains. Covert channels must be prevented across security domains by adapting the microarchitecture. Security domains allow the application logic to formally define microarchitectural isolation constrains that must be enforced by the hardware.
+
+
+The TG will develop an ISA specification, a security guide, an implementation guide, a proof-of-concept implementation including both a prototype RISC-V core and compiler, and a test suite for common covert channels.
+        \end{small}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Performance counters}
+
+    \begin{block}{}
+        Performance counters can serve as the basis of architectural covert channels.
+        This can be mitigated by scoping them in the security domain.
+    \end{block}
+
+    \begin{block}{}
+        Should we consider performence counters in the scope of the TG ?
+    \end{block}
+\end{frame}
+
+\end{document}
