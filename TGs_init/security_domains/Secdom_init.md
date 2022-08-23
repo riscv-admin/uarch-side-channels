@@ -40,9 +40,6 @@ Address spaces and security domains are orthogonal concepts.
 1. Deciding on the precise semantics: lots of possibilities there with different complexity/performance trade-offs.
 2. Defining the security policies.
 
-This point needs to be further discussed in the uSC-SIG.
-3. Performance counters: they can be used to build architectural covert channels. Should they be in scope ?
-
 ## TG productions
 
 Our initial production objectives include:
@@ -53,13 +50,16 @@ Our initial production objectives include:
 4. A proof-of-concept implementation.
 5. A test strategy guide, including a test suite for common covert channels.
 
-
 ## Charter proposal
 
-Timing covert channels are used to exfiltrate confidential data using microarchitectural states as a medium for communications.
-These channels are particularly relevant in the context of microarchitectural attacks such as Spectre and Meltdown.
+Timing covert channels are used to exfiltrate confidential data using microarchitectural states as a medium for communications. These channels are particularly relevant in the context of microarchitectural attacks such as Spectre and Meltdown.
 
-The security domains task group (proposed short name: secdom TG) will define a small ISA extension to prevent malicious covert channels.
-More precisely, we will introduce a notion of security domains. Covert channels must be prevented across security domains by adapting the microarchitecture. Security domains allow the application logic to formally define microarchitectural isolation constrains that must be enforced by the hardware.
+The Microarchitecture Side-Channel Resistant Instruction Spans Task Group (proposed short name: uSCR-IS TG) will define a small ISA extension to prevent malicious covert channels. More precisely, we will introduce a notion of side-channel resistant instruction spans, such that covert channels can be prevented across instruction spans by adapting the microarchitecture. Introducing instruction spans as an architectural feature makes it possible for higher-level program logic to declare that a sequence of instructions should be microarchitecturally isolated within a larger instruction stream (for example, a span of instructions that implement a cryptographic operation may be isolated to protect against side-channel attacks). The proposed RISC-V uSCR-IS TG will collaborate to produce:
 
-The TG will develop an ISA specification, a security guide, an implementation guide, a proof-of-concept implementation including both a prototype RISC-V core and compiler, and a test suite for common covert channels.
+1. A small ISA extension.
+2. A security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
+3. An implementation guide, focusing on the principles of microarchitecture design that enable protection against covert channels. -> intended for hardware engineers.
+4. A proof-of-concept implementation, including both a prototype RISC-V core and compiler managing the necessary intrinsics.
+5. A test strategy guide, including a test suite for common covert channels.
+
+The TG will work with the appropriate Priv/Unpriv ISA committee, Architecture Review Committee, and Security HC to determine which parts of the work should follow the standard ISA specification process, Fast Track process, or non-ISA process, and how other recent policy or process changes may apply (such as the discussion around the use of hint instructions in CFI).
