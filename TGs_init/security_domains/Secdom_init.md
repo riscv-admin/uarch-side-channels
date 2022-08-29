@@ -44,8 +44,8 @@ Address spaces and security domains are orthogonal concepts.
 
 Our initial production objectives include:
 
-1. a small ISA extension.
-2. a security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
+1. A small ISA extension (possibly no more than one or two instructions, or only a new CSR).
+2. A security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
 3. An implementation guide, focusing on the principles of microarchitecture design that enable protection against covert channels. -> intended for hardware engineers.
 4. A proof-of-concept implementation.
 5. A test strategy guide, including a test suite for common covert channels.
@@ -56,7 +56,7 @@ Timing covert channels are used to exfiltrate confidential data using microarchi
 
 The Microarchitecture Side-Channel Resistant Instruction Spans Task Group (proposed short name: uSCR-IS TG) will define a small ISA extension to prevent malicious covert channels. More precisely, we will introduce a notion of side-channel resistant instruction spans, such that covert channels can be prevented across instruction spans by adapting the microarchitecture. Introducing instruction spans as an architectural feature makes it possible for higher-level program logic to declare that a sequence of instructions should be microarchitecturally isolated within a larger instruction stream (for example, a span of instructions that implement a cryptographic operation may be isolated to protect against side-channel attacks). The proposed RISC-V uSCR-IS TG will collaborate to produce:
 
-1. A small ISA extension.
+1. A small ISA extension (possibly no more than one or two instructions, or only a new CSR).
 2. A security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
 3. An implementation guide, focusing on the principles of microarchitecture design that enable protection against covert channels. -> intended for hardware engineers.
 4. A proof-of-concept implementation, including both a prototype RISC-V core and compiler managing the necessary intrinsics.
