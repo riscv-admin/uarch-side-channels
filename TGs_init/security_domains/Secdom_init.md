@@ -10,7 +10,7 @@ But this decision is part of the software logic. The hardware cannot guess by it
 As a consequence, the ISA must be extended for the software to communicate the security constraints to the hardware.
 
 As a strategy, we would like a unified solution capable of supporting multiple hardware implementations.
-The current approach to side-channel attacks involves individual mitigations for each microarchitectural component that could support covert channels, but this proliferation of idiosyncratic and sometimes incompatible mitigations is not sustainable.
+The current approach to side-channel attacks involves individual mitigation techniques for each microarchitectural component that could support covert channels, but this proliferation of idiosyncratic and sometimes incompatible mitigation techniques is not sustainable.
 
 ## Summary of the considered technical solution
 
@@ -30,7 +30,7 @@ But this solution would have important drawbacks since microarchitectural spans 
 
 The hardware should implement both kinds of isolation: memory isolation with virtual memory and microarchitectural state isolation with microarchitectural spans, and will be more secure because it has both. These two mechanisms are mostly orthogonal.
 
-2. Can a microarchitectural span span several address spaces ?
+2. Can a microarchitectural span several address spaces ?
 
 It is totally possible to change the ASID, or the virtual memory mapping while staying in the same microarchitectural span. In this case, covert channels could be built between the programs in the two address spaces.
 Address spaces and microarchitectural spans are orthogonal concepts.
@@ -57,8 +57,8 @@ Timing covert channels are used to exfiltrate confidential data using microarchi
 The Microarchitecture Side-Channel Resistant Instruction Spans Task Group (proposed short name: uSCR-IS TG) will define a small ISA extension to prevent malicious covert channels. More precisely, we will introduce a notion of side-channel resistant instruction spans, such that covert channels can be prevented across instruction spans by adapting the microarchitecture. Introducing instruction spans as an architectural feature makes it possible for higher-level program logic to declare that a sequence of instructions should be microarchitecturally isolated within a larger instruction stream (for example, a span of instructions that implement a cryptographic operation may be isolated to protect against side-channel attacks). The proposed RISC-V uSCR-IS TG will collaborate to produce:
 
 1. A small ISA extension (possibly no more than one or two instructions, or only a new CSR).
-2. A security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
-3. An implementation guide, focusing on the principles of microarchitecture design that enable protection against covert channels. -> intended for hardware engineers.
+2. A non-normative security guide: defining threat models, developing rationale, etc. -> intended for security engineers.
+3. A non-normative implementation guide, focusing on the principles of microarchitecture design that enable protection against covert channels. -> intended for hardware engineers.
 4. A proof-of-concept implementation, including both a prototype RISC-V core and compiler managing the necessary intrinsics.
 5. A test strategy guide, including a test suite for common covert channels.
 
