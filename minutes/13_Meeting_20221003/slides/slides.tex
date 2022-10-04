@@ -1,0 +1,165 @@
+\documentclass[11pt]{beamer}
+%\usetheme{Singapore}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{minted}
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\newcommand{\cmark}{\textcolor{green}{\ding{51}}}%
+\newcommand{\xmark}{\textcolor{red}{\ding{55}}}%
+%\author{}
+%\title{}
+%\setbeamercovered{transparent} 
+\setbeamertemplate{navigation symbols}{} 
+%\logo{} 
+%\institute{} 
+%\date{} 
+%\subject{} 
+\begin{document}
+
+\section*{Microarchitecture Side-Channel Resistant Instructions Spans (scrispans)}
+\frame{\sectionpage}
+
+\begin{frame}{Examples semantics}
+ 
+        \begin{itemize}
+                \item \texttt{spansec.create [policies]}: create a new scrispan with given optional set of security policies (flags).
+                \item \texttt{spansec.save rd}: save the current scrispan configuration (ID + security policy) in a register.
+                \item \texttt{spansec.restore rs1}: restore a scrispan configuration from a register holding ID and security policy.
+        \end{itemize}
+                \textbf{We assume that a change of scrispan ID implies microarchitectural isolation.}
+        \begin{itemize}
+                \item \texttt{spansec.alter [policies]}: in addition we could add an instruction that keeps the ID unchanged but modify the security policies.
+        \end{itemize}
+
+
+        \textbf{We are not discussing the implementation for now. Have you alternative semantics in mind ?}
+\end{frame}
+
+\begin{frame}{Security policies}
+        \texttt{[policies]} is the set of security policies applied to a scrispan.
+
+        \begin{itemize}
+                \item \texttt{no speculation}
+                \item \texttt{inline memory encryption}
+                \item \texttt{constant time execution}
+        \end{itemize}
+
+        \textit{Personal comment (Ronan): security policies add complexity, but not sure if useful. Suggested policies could be better achieved with other means.}\\
+        \textbf{Do you have strong use cases for security policies ?}
+\end{frame}
+
+\begin{frame}[fragile]{Usecase \#1: web server}
+        \begin{block}{Goal: isolate users}
+                Each process has its own scrispan.
+                \begin{minted}{c}
+// creating process P1
+spansec.create
+
+// during switch from P1 to P2
+spansec.save P1
+spansec.restore P2   
+                \end{minted}
+                
+        \end{block}
+
+        \begin{alertblock}{Comments}
+                \begin{itemize}
+                        \item \cmark{} This explicit span gymnastic ensures proper microarchitectural state isolation.
+                        \item \xmark{} In this precise use case, we could tie the scrispan to the ASID (Address Space ID) instead.
+                \end{itemize}
+        \end{alertblock}
+        
+\end{frame}
+
+\begin{frame}[fragile]{Pattern: Microarchitectural state poisoning}
+        \begin{block}{Goal: isolating user poisoned uarch state from data processing}
+                \begin{minted}{c}
+// span A: user controlled, span B: data processing
+spansec.restore A
+state_poisoning();
+spansec.save A
+
+spansec.restore B
+data_processing();
+spansec.save B
+                \end{minted}
+        \end{block}
+
+        \begin{alertblock}{Comments}
+                Since poisoning can be done in the same or another address space (cf \url{https://transient.fail}), we cannot rely on tying the scrispan with the ASID.
+                
+        \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Simultaneous multithreading (SMT)}
+        Example from \url{https://github.com/IAIK/transientfail/blob/master/pocs/spectre/RSB/sa_ip/main.c}, two software threads in the same address space.\\
+\begin{block}{Pattern}
+\begin{minted}{c}
+pthread_t attacker_thread;
+pthread_t victim_thread;
+pthread_create(&attacker_thread, 0, attacker, 0);
+pthread_create(&victim_thread, 0, victim, 0);
+\end{minted}
+\end{block}
+
+\begin{block}{Solution}
+\begin{minted}{c}
+// pthread_create should start with
+spansec.create
+\end{minted}
+\end{block}
+\framebreak
+\begin{alertblock}{Hardware consequences}
+        \begin{itemize}
+                \item They are scheduled on different cores.
+                \item If the hardware allows, the harts are isolated in the same core.
+                \item They are not executed in parallel but sequentially, with proper microarchitectural flushing when switching between threads.
+        \end{itemize}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile,allowframebreaks]{Spectre-PHT (v1)}
+        \begin{block}{Vulnerabiliy}
+                \begin{minted}{c}
+if (x < array1_size) {
+    y = array2[array1[x] * 4096];
+}
+//speculative load 1: array1[x] -> accessing secret
+//speculative load 2: array2[...] -> leaking gadget
+                \end{minted}
+        \end{block}        
+
+        \begin{block}{Solution 1: disabling speculation}
+                \begin{minted}{c}
+spansec.alter +nospeculation
+if (x < array1_size) {
+    y = array2[array1[x] * 4096];
+}
+spansec.alter -nospeculation
+                \end{minted}
+        \end{block}
+\framebreak
+        \begin{block}{Solution 2: isolating poisoned state}
+                \begin{minted}{c}
+if (x < array1_size) {
+    spansec.save A
+    spansec.create
+    y = array2[array1[x] * 4096];
+    spansec.restore A
+}
+                \end{minted}
+        \end{block}
+
+        \begin{alertblock}{Comments}
+                \begin{itemize}
+                        \item \xmark{} \texttt{nospeculation}: poor portability, precise behaviour is very hardware dependent, overkill ? (How to allow speculation across scrispan ?).
+                        \item \xmark{} \texttt{state isolation}: very bad performances.
+                        \item Probably needs another mechanism.
+                \end{itemize}
+        \end{alertblock}
+\end{frame}
+\end{document}
