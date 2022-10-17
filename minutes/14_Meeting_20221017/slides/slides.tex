@@ -1,0 +1,95 @@
+\PassOptionsToPackage{svgnames}{xcolor}
+\documentclass[11pt]{beamer}
+%\usetheme{Singapore}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{minted}
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage[skins]{tcolorbox}
+\newcommand{\cmark}{\textcolor{green}{\ding{51}}}%
+\newcommand{\xmark}{\textcolor{red}{\ding{55}}}%
+
+\newtcbox{\instbox}{enhanced,nobeforeafter,tcbox raise base,boxrule=0.2pt,top=0mm,bottom=0mm,
+  right=0mm,left=0mm,arc=1pt,boxsep=1pt,before upper={\vphantom{dlg}}, frame hidden,
+  colback=gray!25!white}
+
+\MakeRobust\instbox 
+
+\newtcbox{\regbox}{enhanced,nobeforeafter,tcbox raise base,boxrule=0.2pt,top=0mm,bottom=0mm,
+  right=0mm,left=0mm,arc=1pt,boxsep=1pt,before upper={\vphantom{dlg}}, frame hidden,
+  colback=Moccasin!75!white}
+
+\MakeRobust\regbox
+ 
+\newcommand{\acr}{reg.ac}
+\newcommand{\inst}[1]{\instbox{\texttt{#1}}} % to display instructions
+\newcommand{\reg}[1]{\regbox{\texttt{#1}}} % to register names or related 
+%\author{}
+%\title{}
+%\setbeamercovered{transparent} 
+\setbeamertemplate{navigation symbols}{} 
+%\logo{} 
+%\institute{} 
+%\date{} 
+%\subject{} 
+\begin{document}
+
+\section*{Microarchitecture Side-Channel Resistant Instructions Spans (scrispans)}
+\frame{\sectionpage}
+
+\begin{frame}{Examples semantics}
+ 
+        \begin{itemize}
+                \item \texttt{spansec.create [policies]}: create a new scrispan with given optional set of security policies (flags).
+                \item \texttt{spansec.save rd}: save the current scrispan configuration (ID + security policy) in a register.
+                \item \texttt{spansec.restore rs1}: restore a scrispan configuration from a register holding ID and security policy.
+        \end{itemize}
+                \textbf{We assume that a change of scrispan ID implies microarchitectural isolation.}
+        \begin{itemize}
+                \item \texttt{spansec.alter [policies]}: in addition we could add an instruction that keeps the ID unchanged but modify the security policies.
+        \end{itemize}
+
+
+\end{frame}
+
+\begin{frame}{Proposed encoding 1}
+    \begin{block}{}
+        Using a custom opcode for now.
+        The scrispan state is split between an ID (e.g. 24 bits) and policy flags (e.g. 8 bits).
+
+        \begin{itemize}
+            \item \inst{spansec.restore \reg{rs1}, \reg{imm}}: load ID and policy flags from \reg{rs1}, then update policies from \reg{imm}.
+            \item \inst{spansec.save \reg{rd}}: store ID and policies in \reg{rd}.
+        \end{itemize}
+
+        Pseudo instructions:
+        \begin{itemize}
+            \item \inst{spansec.create \reg{imm}} = \inst{spansec.restore \reg{x0}, \reg{imm}}.
+            \item \inst{spansec.alter \reg{imm}} = \inst{spansec.save \reg{xX}}; \inst{spansec.load \reg{xX}, \reg{imm}}.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Proposed encoding 2}
+    Using CSRs to store ID and policy flags.
+    \begin{itemize}
+        \item scrispan ID CSR = 0xXXX
+        \item scrispan policies CSR = 0xYYY
+    \end{itemize}
+
+    Pseudo instructions:
+    \begin{itemize}
+        \item \inst{spansec.create \reg{imm}} = \inst{CSRRW \reg{x0}, \reg{x0}, 0xXXX}; \inst{CSRRI \reg{x0}, \reg{imm}, 0xYYY}
+        \item \inst{spansec.save \reg{rd}} = \inst{CSRRW \reg{rd}, \reg{?}, 0xXXX}; + same for flags
+    \end{itemize}
+    Allow altering policies with \inst{CSRRS} and \inst{CSRRC}.
+    Atomic behaviour of \inst{CSRRW} could be a good thing ?
+
+\end{frame}
+
+
+\end{document}
