@@ -2,7 +2,7 @@
 
 For the purpose of initiating a RISC-V Task group on Microarchitecture Side-Channel Resistant Instruction Spans, (called scrispans or microarchitectural span in this document, formerly called with generic name "security domains"), this document synthesizes the goals and rationale behind this task group. A charter proposition can be found at the end.
 
-## Relevant literature on timing protection against covert channels
+## Relevant literature on timing protection against covert channels (non-exhaustive)
 
 - [*Systematic Prevention of On-Core Timing Channels by Full Temporal Partitioning*](https://arxiv.org/pdf/2202.12029.pdf), Nils Wistoff, Moritz Schneider, Frank K. Gürkaynak, Gernot Heiser, Luca Benini.
 - [*Under the Dome: Preventing Hardware Timing Information Leakage*](https://hal.archives-ouvertes.fr/hal-03351957/document), Mathieu Escouteloup, Ronan Lashermes, Jacques Fournier, Jean-Louis Lanet, at CARDIS 2021.
