@@ -67,8 +67,12 @@ The TG will work with the appropriate Priv/Unpriv ISA committee, Architecture Re
 ## Microarchitecture Side-Channel Resistant Instructions spans (scrispans) examples
 In this document, we propose some examples of usages of scrispans against covert and side channels, using the tagged span semantics. Alternative semantics are possible but would not change drastically the examples.
 A scrispan is an explicit instruction span, identified with an ID number.
+
 Microarchitectural state must not be shared between two different scrispans with different IDs.
-We allow tying a security policy to a scrispan. Example of such possible policies:
+Execution time in the current scrispan must be independent from execution in other scrispans.
+Switching to a new scrispan must be constant time.
+
+Optionally, we allow tying a security policy to a scrispan. Example of such possible policies:
 - No speculation
 - Inline memory encryption
 - Constant-time execution
