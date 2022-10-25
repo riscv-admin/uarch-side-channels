@@ -22,7 +22,8 @@ The current approach to side-channel attacks involves individual mitigation tech
 
 Solutions against covert channels include microarchitecture state partitioning and state erasure (aka flushing). This coarse-grained microarchitectural state isolation is supported by a microarchitectural span. A microarchitecture side-channel resistant instruction span is an execution domain where a same security policy applies. By definition, covert channels are forbidden between these spans.
 
-When the system switches to a microarchitectural span, the microarchitecture must act accordingly to ensure state isolation, by enforcing state partitioning or state erasure.
+When the system switches to a new microarchitectural span, the microarchitecture must act accordingly to ensure state isolation, by enforcing state partitioning or state erasure.
+Execution time in the current span must be independent from execution in other spans.
 
 ## Frequently Asked Questions
 
@@ -101,6 +102,7 @@ In addition we could add an instruction that keeps the ID unchanged but modify t
 
 Today, a web server usually isolates its users by relying on virtual memory, by spawning a process for each one of them.
 But the process switch is usually unable to clear all microarchitectural states.
+
 ####  Solution
 
 Each process has its own scrispan.
@@ -144,6 +146,7 @@ spansec.save B
 Since poisoning can be done in the same or another address space (cf [transient.fail](https://transient.fail/)), we cannot rely on tying the scrispan with the ASID.
 
 ### Simultaneous multithreading (SMT) and threaded applications
+
 It is debatable if SMT should even be possible, because of the security implications of so many shared microarchitectural states.
 But a developer usually handles software threads and not hardware threads (harts) directly.
 
