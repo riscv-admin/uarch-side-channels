@@ -12,7 +12,7 @@ microstructure tagging, leakage resilient functionalities, preventing read-only 
 (e.g., performance counters).
 
 The SIG will discuss and propose recommendations on how to evolve the compliance model to include
-extensions with no funcational side effects.
+extensions with no functional side effects.
 
 The SIG will develop one or more TG Charters that define one or more of the following items: written
 documentation, threat models, prototype implementations, toolchain support, and compliance suite for a
