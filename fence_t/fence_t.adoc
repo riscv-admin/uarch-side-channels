@@ -2,21 +2,26 @@
 
 == Why fence.t: the rationale
 
-Covert channels use microarchitectural states to allow unauthorized communication across security boundaries.
+Covert channels allow unauthorized communication across security boundaries.
 Attackers can leverage these covert channel to leak data, from supervisor to user privilege levels, from one process to another, etc.
-In particular, we are here interested in timing covert channels where the exfiltrated data is read through the timing of some operations.
+Timing channels use the timing of events to signal information.
+Microarchitectural timing channels control event timing through the use of microarchitectural state that depends on execution history.
 
-Our threat model consider only timing covert channels since they can be leveraged on a distant device.
-We consider other physic-based covert channels (e.g. using power consumption) as out of scope.
+While microarchitectural state an affect other physical quantities, such as temperature, power draw, or electromagnetic emanation,
+our threat model focuses on timing covert channels since they are easy to explooit remotely.
+We therefore consider other physical channels out of scope.
 
-Covert channels are a critical part of transient execution attacks.
-Such attacks typically use speculative execution to read a secret and then use a covert channel to exfiltrate the data.
+Covert channels are, among others, utilised in transient-execution attacks.
+Such attacks typically use speculative execution to read a secret and then use a covert timing channel to exfiltrate the data.
 
-*Any microarchitectural state*, no just cache memories, can support a covert channel and it is not realistically feasible to fordid microarchitectural state.
-Since state sharing is a normal behaviour in most cases, the core requires a hint to know when state sharing is forbidden.
+*Any microarchitectural state that depends on execution history* can be used to implement a covert channel. This includes CPU caches, other form of caching (such as the TLB or branch target buffers) but also state machines as they are used in prefetchers or for cache-line replacement. Prohibiting such microarchitectural state outright is infeasible, so we need ways to manage it securely.
+
+Furthermore, most such state is inherently shared and requiring strict partitioning between security domains is also infeasible. An automatic resetting of microarchitectural state on hardware-detecible events (such as writing the page table pointer) would be overkill, as multiple address spaces may share the same security domain.
+
+It is therefore necessary to provide a mechanism by which software can inform hardware that a switch of security domain is being performed, and sharing of microarchitectural state across this switch must be prevented.
 This is the purpose of _fence.t_.
 
-== fence.t semantics 
+== fence.t semantics
 
 This is a first draft proposal for _fence.t_.
 
@@ -27,13 +32,13 @@ We define the following RISC-V instruction, without source nor destination regis
 fence.t [flags]
 ----
 
-The flags may give precisions to the associated type of context switch related to this _fence.t_ when it applies.
+The flags may be used to restrict the action of _fence.t_ to specific subsets of microarchtectural state.
 The core must guarantee the following semantics.
 
 [literal]
-The timing of any instruction or sequence of instructions executing after the fence must be independent from any microarchitectural state before the fence. Exceptions may be occurs depending on the flags.
+The timing of any instruction or sequence of instructions executing after the fence must be independent from any microarchitectural state before the fence. The flags may restrict this requirement to certain subsets of mircorarchitectural state.
 
-In this definition, timing is any measurable duration : we do not care if this is the actual duration of the execution of an instruction or if includes time spent in the issue queue, or something else.
+In this definition, timing is any measurable latency: we do not care if this is the actual latency of the execution of an instruction or time spent in the issue queue, or something else.
 
 Defined flags are the following:
 
@@ -41,7 +46,7 @@ Defined flags are the following:
 - `AS_SWITCH`: the _fence.t_ is associated with a address space change.
 - `INT_SWITCH`: the _fence.t_ is associated with an interrupt.
 
-Any set of flags is valid. See <<section-split,Split section>> for precisions on how these flags may be used.
+Any combination of flags is valid. See <<section-split,Split section>> for more detail on how these flags may be used.
 
 == Implementation guidelines
 
@@ -49,32 +54,38 @@ Any set of flags is valid. See <<section-split,Split section>> for precisions on
 
 === No timing dependecies
 
-The first solution to enforce _fence.t_ semantics is to have instructions executing in a constant time fashion.
-Typically arithmetic operations (usually excluding division and sometimes multiplication) are executed in constant time.
+One way of enforceing _fence.t_ semantics is to have instructions executing in constant time.
+Arithmetic operations (usually excluding division and sometimes multiplication) typically execute in constant time.
 
-The RISC-V extension Zkt mandates execution in in data-independant manner for a given list of instructions.
+The RISC-V extension Zkt mandates execution in in data-independent manner for a given list of instructions.
 *Our requirements here are different*.
 
 We recognize that instruction execution time is a fuzzy concept on a modern complex microarchitecture: is it only the time spent in the execute stage ? Or does it comprise microarchitectural behaviours such as instruction scheduling ?
 
 In our case, timings designate *any* measurable timings through _architectural_ means (with `RDTIME` for example). Timings measured through _physical_ means, such as power consumption measurements, are out of scope.
 
+*_Comment: I'm not sure about this one. Time can be measured by non-architected means, this is what you inevitably do in a remote attack. I think what you mean to say is that we ignore the effect timing may have on other measurable quantities? [Gernot]_*
 
 === Flush
 
-The most direct way to prevent microarchitectural state timing dependency is to erase the state.
-Flushing is therefore in lots of case the go-to solution.
-By flushing we mean that the corresponding state must be written to before any future use.
+The most direct way to prevent microarchitectural state timing dependency is to reset the state to a deterministic value.
+Hence, _fence.t_ may be implemented as flushing all state, as long as the flush is completed before any future access of the state.
 
 [example]
-In the case of a simple data cache, flushing includes invalidating all data present. *But invalidation is not enough.* For example, extra-care must be taken to erase the cache invalidation mechanism metadata, so that future allocation is independant from the ones preceding the fence.
+In the case of a simple data cache, flushing includes invalidating all data present. *However, that on its own is not enough.* For example, it is necessary to erase any meta-date that is used for cache-line allocation to ensure future execution is completely independent on any execution prior to executing _fence.t_.
 
 WARNING: Any microarchitectural state left intact accross _fence.t_ may still be used to support a covert channel.
 
-What to flush is microarchitecture dependant.
+An alternative to flushing may be partitioning of state.
+
+What to flush is microarchitecture dependent.
 But usually the biggest threats are with cache and branch predictions mechanisms.
 But flushing can be costly, this is why, in some specific cases, we may prefer to split ressources instead.
 Supporting _fence.t_ may imply microarchitectural changes. For example, for all its deficiencies, write-through caches are faster to invalidate than write-back.
+
+*_Comment: I don't see any realistic scenario where this would lead to moving from write-back to write-through caches -- you'd be replacing a one-off cost by a coninuing overhead that will quickly outweigh the one-off cost. [Gernot]_*
+
+*_Comment: Partitioning would require the additon of some form of partition tag. [Gernot]_*
 
 [[section-split]]
 === Split
@@ -87,6 +98,10 @@ The TLB is effectively split into several subressources, one for each supported 
 
 In these cases, for these interfaces, _fence.t_ *may* avoid to flush the corresponding structures.
 TLB entries don’t need to be flushed when switching to a new address space, branch predictors when switching to a new privilege level.
+
+*_Comment: I can't see this work. TLB ASID tagging is dynamic, and entries tagged with one ASID are replaced by entries with a different ASID. Flushing can only be avoided by _static_ partitioning (or dynamic but fully under OS control). OTOH, if a resource is stitically partitoned it cannot be used for a timign channel, so I'm not sure why you would ever want to flush it. [Gernot]_*
+
+*_Comment: I'm not convinced that the flush on prvilege switch buys you much, but there's no harm in having the feature.  [Gernot]_*
 
 This is the purpose of the flags that indicate that some microarchitectural state may *not* be flushed.
 
@@ -102,6 +117,8 @@ The attacker can also use peripherals states, accessible and modifiable from the
 The simplest example is the last level cache (LLC), shared by all cores which can be used to create a covert channel.
 
 The _fence.t_ semantics MUST be propagated to the core bus, to all peripherals so that they correctly deal with it.
+
+*_Comment: Here I actually _disagree_. Flushing the LLC will not only kill performance, it will not actually solve the problem, as the LLC is concurrently accessed by other cores. But nor is it necessary, as the LLC can be partitioned (by colouring). Peripherals will need to be partitioned by the OS, by only giving one domain access (the driver). I think fence.t should only be responsible for on-core resources. [Gernot]_*
 
 
 === Reorder barrier
@@ -122,6 +139,14 @@ Notably, _fence.t_ does not solve this issue.
 Basically, the _fence.t_ can affect a shared cache and therefore, the other cores will have a cold cache state suddenly.
 Allocation of execution time on cores sharing microarchitectural state must be security-conscious (independently of _fence.t_ in reality).
 
+*_Comment: This is why all resources shared between cores must be partitioned. See the time-protection paper: Every resource must be temporally or spatially partitioned, and any resource shared cross-cores can only be spatially partitioned. [Gernot]_*
+
 === Fence.t timing variability
 
-TODO constant time context switching: why / how
+Most microarchitectural state is read-only and should be possible to reset in constant time. But this obviously does not apply to the data cache, which (if it is a write-back cache) must have all dirty lines written back before resetting. This makes the _fence.t_ execution latency inherently history-dependent. There must be a way to prevent this variable latency from being observable.
+
+One way to address this would be to force _fence.t_ to execute in constant time. Alternatively, the privileged software could contain a delay loop that pads execution time to a constant value. However, in practice this sfotware padding may be difficult to do accurately.
+
+Nevertheless, there are benefits of decoupling latency padding from flushing. For example, software is likely to perform operations during a context switch that too have a history-dependent latency. It therefore makes sense to defer the padding until after all such operations have been performed.
+
+The better approach seems to have a separate instruction *_... fill on, according to Nils' model_*
