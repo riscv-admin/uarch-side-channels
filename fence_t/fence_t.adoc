@@ -62,9 +62,7 @@ The RISC-V extension Zkt mandates execution in in data-independent manner for a 
 
 We recognize that instruction execution time is a fuzzy concept on a modern complex microarchitecture: is it only the time spent in the execute stage ? Or does it comprise microarchitectural behaviours such as instruction scheduling ?
 
-In our case, timings designate *any* measurable timings through _architectural_ means (with `RDTIME` for example). Timings measured through _physical_ means, such as power consumption measurements, are out of scope.
-
-*_Comment: I'm not sure about this one. Time can be measured by non-architected means, this is what you inevitably do in a remote attack. I think what you mean to say is that we ignore the effect timing may have on other measurable quantities? [Gernot]_*
+In our case, timings designate *any* measurable timings (with `RDTIME` for example).
 
 === Flush
 
@@ -76,19 +74,21 @@ In the case of a simple data cache, flushing includes invalidating all data pres
 
 WARNING: Any microarchitectural state left intact accross _fence.t_ may still be used to support a covert channel.
 
+[[section-split]]
+=== Partitioning
+
+
 An alternative to flushing may be partitioning of state.
 
 What to flush is microarchitecture dependent.
 But usually the biggest threats are with cache and branch predictions mechanisms.
-But flushing can be costly, this is why, in some specific cases, we may prefer to split ressources instead.
-Supporting _fence.t_ may imply microarchitectural changes. For example, for all its deficiencies, write-through caches are faster to invalidate than write-back.
+But flushing can be costly, this is why, in some specific cases, we may prefer to partition ressources instead.
+Supporting _fence.t_ may imply microarchitectural changes. 
+For example, for all its deficiencies, write-through caches are faster to invalidate than write-back.
 
 *_Comment: I don't see any realistic scenario where this would lead to moving from write-back to write-through caches -- you'd be replacing a one-off cost by a coninuing overhead that will quickly outweigh the one-off cost. [Gernot]_*
 
 *_Comment: Partitioning would require the additon of some form of partition tag. [Gernot]_*
-
-[[section-split]]
-=== Split
 
 Some interfaces should requires a total microarchitectural flush but the cost of it is unmanageable.
 This is typically the case for privilege levels switch, where some microarchitectural states such as branch predictor entries are indexed with the priviledged level.
@@ -96,14 +96,21 @@ This is typically the case for privilege levels switch, where some microarchitec
 Another such case are address spaces switching where we avoid to invalidate TLBs by indexing TLB entries with the Address Space IDentifier (ASID).
 The TLB is effectively split into several subressources, one for each supported ASID.
 
-In these cases, for these interfaces, _fence.t_ *may* avoid to flush the corresponding structures.
-TLB entries don’t need to be flushed when switching to a new address space, branch predictors when switching to a new privilege level.
+Beware, usual implementations can dynamically replace a TLB entry with a new one with a different ASID, which is not secure. But a statically partitioned scheme can be used to quickly switch between two address spaces.
+
+In these case, _fence.t_ *may* avoid to flush the corresponding structures.
 
 *_Comment: I can't see this work. TLB ASID tagging is dynamic, and entries tagged with one ASID are replaced by entries with a different ASID. Flushing can only be avoided by _static_ partitioning (or dynamic but fully under OS control). OTOH, if a resource is stitically partitoned it cannot be used for a timign channel, so I'm not sure why you would ever want to flush it. [Gernot]_*
 
-*_Comment: I'm not convinced that the flush on prvilege switch buys you much, but there's no harm in having the feature.  [Gernot]_*
 
-This is the purpose of the flags that indicate that some microarchitectural state may *not* be flushed.
+This is the purpose of the flags that indicate that some microarchitectural state may *not* be flushed. For example in the case of a statically partitioned TLB, we can use
+
+[,asm]
+----
+fence.t AS_SWITCH
+----
+
+to *not* flush the TLB entries.
 
 [example]
 An application is performing a system call and the privilege level is switched to supervisor.
