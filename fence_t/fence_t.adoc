@@ -3,20 +3,20 @@
 == Why fence.t: the rationale
 
 Covert channels allow unauthorized communication across security boundaries.
-Attackers can leverage these covert channel to leak data, from supervisor to user privilege levels, from one process to another, etc.
+Attackers can leverage these covert channels to leak data, from supervisor to user privilege levels, from one process to another, etc.
 Timing channels use the timing of events to signal information.
 Microarchitectural timing channels control event timing through the use of microarchitectural state that depends on execution history.
 
 While microarchitectural state an affect other physical quantities, such as temperature, power draw, or electromagnetic emanation,
-our threat model focuses on timing covert channels since they are easy to explooit remotely.
+our threat model focuses on timing covert channels since they are easy to exploit remotely.
 We therefore consider other physical channels out of scope.
 
 Covert channels are, among others, utilised in transient-execution attacks.
 Such attacks typically use speculative execution to read a secret and then use a covert timing channel to exfiltrate the data.
 
-*Any microarchitectural state that depends on execution history* can be used to implement a covert channel. This includes CPU caches, other form of caching (such as the TLB or branch target buffers) but also state machines as they are used in prefetchers or for cache-line replacement. Prohibiting such microarchitectural state outright is infeasible, so we need ways to manage it securely.
+*Any microarchitectural state that depends on execution history* can be used to implement a covert channel. This includes CPU caches, other forms of caching (such as the TLB or branch target buffers) but also state machines as they are used in prefetchers, or for cache-line replacement. Prohibiting such microarchitectural state outright is infeasible, so we need ways to manage it securely.
 
-Furthermore, most such state is inherently shared and requiring strict partitioning between security domains is also infeasible. An automatic resetting of microarchitectural state on hardware-detecible events (such as writing the page table pointer) would be overkill, as multiple address spaces may share the same security domain.
+Furthermore, most such state is inherently shared and requiring strict partitioning between security domains is also infeasible. An automatic resetting of microarchitectural state on hardware-detectable events (such as writing the page table pointer) would be overkill, as multiple address spaces may share the same security domain.
 
 It is therefore necessary to provide a mechanism by which software can inform hardware that a switch of security domain is being performed, and sharing of microarchitectural state across this switch must be prevented.
 This is the purpose of _fence.t_.
@@ -32,24 +32,23 @@ We define the following RISC-V instruction, without source nor destination regis
 fence.t [flags]
 ----
 
-The flags may be used to restrict the action of _fence.t_ to specific subsets of microarchtectural state.
+The flags may be used to restrict the action of _fence.t_ to specific subsets of microarchitectural state.
 The core must guarantee the following semantics.
 
 [literal]
-The timing of any instruction or sequence of instructions executing after the fence must be independent from any microarchitectural state before the fence. The flags may restrict this requirement to certain subsets of mircorarchitectural state.
+The timing of any instruction or sequence of instructions executing after the fence must be independent of any microarchitectural state before the fence. The flags may exclude this requirement for some subsets of microarchitectural state.
 
 In this definition, timing is any measurable latency: we do not care if this is the actual latency of the execution of an instruction or time spent in the issue queue, or something else.
 
 Defined flags are the following:
 
 - `PRIV_SWITCH`: the _fence.t_ is associated with a privilege level change.
-- `AS_SWITCH`: the _fence.t_ is associated with a address space change.
+- `AS_SWITCH`: the _fence.t_ is associated with an address space change.
 - `INT_SWITCH`: the _fence.t_ is associated with an interrupt.
 
-Any combination of flags is valid. See <<section-split,Split section>> for more detail on how these flags may be used.
+Any combination of flags is valid. See <<section-split,Partionning section>> for more details on how these flags may be used.
 
 == Implementation guidelines
-
 
 
 === No timing dependecies
@@ -70,13 +69,12 @@ The most direct way to prevent microarchitectural state timing dependency is to 
 Hence, _fence.t_ may be implemented as flushing all state, as long as the flush is completed before any future access of the state.
 
 [example]
-In the case of a simple data cache, flushing includes invalidating all data present. *However, that on its own is not enough.* For example, it is necessary to erase any meta-date that is used for cache-line allocation to ensure future execution is completely independent on any execution prior to executing _fence.t_.
+In the case of a simple data cache, flushing includes invalidating all data present. *However, that on its own is not enough.* For example, it is necessary to erase any metadata that is used for cache-line allocation to ensure future execution is completely independent on any execution prior to executing _fence.t_.
 
 WARNING: Any microarchitectural state left intact accross _fence.t_ may still be used to support a covert channel.
 
 [[section-split]]
 === Partitioning
-
 
 An alternative to flushing may be partitioning of state.
 
@@ -84,76 +82,39 @@ What to flush is microarchitecture dependent.
 But usually the biggest threats are with cache and branch predictions mechanisms.
 But flushing can be costly, this is why, in some specific cases, we may prefer to partition ressources instead.
 Supporting _fence.t_ may imply microarchitectural changes. 
-For example, for all its deficiencies, write-through caches are faster to invalidate than write-back.
 
-*_Comment: I don't see any realistic scenario where this would lead to moving from write-back to write-through caches -- you'd be replacing a one-off cost by a coninuing overhead that will quickly outweigh the one-off cost. [Gernot]_*
+Some interfaces should require a total microarchitectural flush but the cost of it is unmanageable. A partionning scheme can be used instead.
+In this case, _fence.t_ *may* avoid to flush the corresponding structures.
 
-*_Comment: Partitioning would require the additon of some form of partition tag. [Gernot]_*
-
-Some interfaces should requires a total microarchitectural flush but the cost of it is unmanageable.
-This is typically the case for privilege levels switch, where some microarchitectural states such as branch predictor entries are indexed with the priviledged level.
-
-Another such case are address spaces switching where we avoid to invalidate TLBs by indexing TLB entries with the Address Space IDentifier (ASID).
-The TLB is effectively split into several subressources, one for each supported ASID.
-
-Beware, usual implementations can dynamically replace a TLB entry with a new one with a different ASID, which is not secure. But a statically partitioned scheme can be used to quickly switch between two address spaces.
-
-In these case, _fence.t_ *may* avoid to flush the corresponding structures.
-
-*_Comment: I can't see this work. TLB ASID tagging is dynamic, and entries tagged with one ASID are replaced by entries with a different ASID. Flushing can only be avoided by _static_ partitioning (or dynamic but fully under OS control). OTOH, if a resource is stitically partitoned it cannot be used for a timign channel, so I'm not sure why you would ever want to flush it. [Gernot]_*
-
-
-This is the purpose of the flags that indicate that some microarchitectural state may *not* be flushed. For example in the case of a statically partitioned TLB, we can use
-
-[,asm]
-----
-fence.t AS_SWITCH
-----
-
-to *not* flush the TLB entries.
+This is the purpose of the flags that indicate that some microarchitectural state may *not* be flushed.
 
 [example]
 An application is performing a system call and the privilege level is switched to supervisor.
-You want to prevent covert channel, but your core already have branch predictor states split by privilege level.
-By flagging the switch as `fence.t PRIV_SWITCH`, the core can decide to not flush the branch predictor states.
-
-=== Propagation to the bus / peripherals
-
-Covert channels are not only supported by the core microarchitectural state.
-The attacker can also use peripherals states, accessible and modifiable from the core, as such.
-The simplest example is the last level cache (LLC), shared by all cores which can be used to create a covert channel.
-
-The _fence.t_ semantics MUST be propagated to the core bus, to all peripherals so that they correctly deal with it.
-
-*_Comment: Here I actually _disagree_. Flushing the LLC will not only kill performance, it will not actually solve the problem, as the LLC is concurrently accessed by other cores. But nor is it necessary, as the LLC can be partitioned (by colouring). Peripherals will need to be partitioned by the OS, by only giving one domain access (the driver). I think fence.t should only be responsible for on-core resources. [Gernot]_*
-
+You want to prevent covert channels, but your core already have branch predictor states partionned by privilege level.
+By flagging the switch as `fence.t PRIV_SWITCH`, the hardware can decide to not flush the branch predictor states.
 
 === Reorder barrier
 
 With its semantics so defined, _fence.t_ imposes that out of order cores cannot reorder the fence *for instructions impacting the microarchitectural state*.
 It is effectively a reorder barrier.
 
+=== Propagation to the bus / peripherals
 
-== Limits
+Covert channels are not only supported by the core microarchitectural state.
+The attacker can also use peripherals states, accessible and modifiable from the core, as such.
 
+The _fence.t_ semantics MUST be propagated to the core bus, to all peripherals so that they correctly deal with it.
 
-=== Port contention
+[example]
+The simplest example is the last level cache (LLC), shared by several cores which can be used to create a covert channel. But flushing the LLC is not an efficient solution, neither for performances nor security (risks of contention). To adhere to the _fence.t_ semantics, the LLC is thus required to be partitionned.
 
-Port contention has been demonstrated to be the support of covert channels, in particular in multithreaded cores.
-Notably, _fence.t_ does not solve this issue.
-*And it can make it worse !*
-
-Basically, the _fence.t_ can affect a shared cache and therefore, the other cores will have a cold cache state suddenly.
-Allocation of execution time on cores sharing microarchitectural state must be security-conscious (independently of _fence.t_ in reality).
-
-*_Comment: This is why all resources shared between cores must be partitioned. See the time-protection paper: Every resource must be temporally or spatially partitioned, and any resource shared cross-cores can only be spatially partitioned. [Gernot]_*
-
-=== Fence.t timing variability
+== Fence.t timing variability
 
 Most microarchitectural state is read-only and should be possible to reset in constant time. But this obviously does not apply to the data cache, which (if it is a write-back cache) must have all dirty lines written back before resetting. This makes the _fence.t_ execution latency inherently history-dependent. There must be a way to prevent this variable latency from being observable.
 
 One way to address this would be to force _fence.t_ to execute in constant time. Alternatively, the privileged software could contain a delay loop that pads execution time to a constant value. However, in practice this sfotware padding may be difficult to do accurately.
 
-Nevertheless, there are benefits of decoupling latency padding from flushing. For example, software is likely to perform operations during a context switch that too have a history-dependent latency. It therefore makes sense to defer the padding until after all such operations have been performed.
+Nevertheless, there are benefits of decoupling latency padding from flushing. For example, software is likely to perform operations during a context switch that too have a history-dependent latency. An example is an interrupt at a known time, that do some operations before the contex switch.
+It therefore makes sense to defer the padding until after all such operations have been performed.
 
 The better approach seems to have a separate instruction *_... fill on, according to Nils' model_*
