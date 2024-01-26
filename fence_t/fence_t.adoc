@@ -7,7 +7,7 @@ Attackers can leverage these covert channels to leak data, from supervisor to us
 Timing channels use the timing of events to signal information.
 Microarchitectural timing channels control event timing through the use of microarchitectural state that depends on execution history.
 
-While microarchitectural state an affect other physical quantities, such as temperature, power draw, or electromagnetic emanation,
+While microarchitectural state can affect other physical quantities, such as temperature, power draw, or electromagnetic emanation,
 our threat model focuses on timing covert channels since they are easy to exploit remotely.
 We therefore consider other physical channels out of scope.
 
@@ -46,7 +46,7 @@ Defined flags are the following:
 - `AS_SWITCH`: the _fence.t_ is associated with an address space change.
 - `INT_SWITCH`: the _fence.t_ is associated with an interrupt.
 
-Any combination of flags is valid. See <<section-split,Partionning section>> for more details on how these flags may be used.
+Any combination of flags is valid. See <<section-split,Partitioning section>> for more details on how these flags may be used.
 
 == Implementation guidelines
 
@@ -81,16 +81,16 @@ An alternative to flushing may be partitioning of state.
 What to flush is microarchitecture dependent.
 But usually the biggest threats are with cache and branch predictions mechanisms.
 But flushing can be costly, this is why, in some specific cases, we may prefer to partition ressources instead.
-Supporting _fence.t_ may imply microarchitectural changes. 
+Supporting _fence.t_ may imply microarchitectural changes.
 
-Some interfaces should require a total microarchitectural flush but the cost of it is unmanageable. A partionning scheme can be used instead.
+Some interfaces should require a total microarchitectural flush but the cost of it is unmanageable. A partitioning scheme can be used instead.
 In this case, _fence.t_ *may* avoid to flush the corresponding structures.
 
 This is the purpose of the flags that indicate that some microarchitectural state may *not* be flushed.
 
 [example]
 An application is performing a system call and the privilege level is switched to supervisor.
-You want to prevent covert channels, but your core already have branch predictor states partionned by privilege level.
+You want to prevent covert channels, but your core already have branch predictor states partitioned by privilege level.
 By flagging the switch as `fence.t PRIV_SWITCH`, the hardware can decide to not flush the branch predictor states.
 
 === Reorder barrier
@@ -106,7 +106,7 @@ The attacker can also use peripherals states, accessible and modifiable from the
 The _fence.t_ semantics MUST be propagated to the core bus, to all peripherals so that they correctly deal with it.
 
 [example]
-The simplest example is the last level cache (LLC), shared by several cores which can be used to create a covert channel. But flushing the LLC is not an efficient solution, neither for performances nor security (risks of contention). To adhere to the _fence.t_ semantics, the LLC is thus required to be partitionned.
+The simplest example is the last level cache (LLC), shared by several cores which can be used to create a covert channel. But flushing the LLC is not an efficient solution, neither for performances nor security (risks of contention). To adhere to the _fence.t_ semantics, the LLC is thus required to be partitioned.
 
 == Fence.t timing variability
 
