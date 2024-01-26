@@ -117,4 +117,5 @@ One way to address this would be to force _fence.t_ to execute in constant time.
 Nevertheless, there are benefits of decoupling latency padding from flushing. For example, software is likely to perform operations during a context switch that too have a history-dependent latency. An example is an interrupt at a known time, that do some operations before the contex switch.
 It therefore makes sense to defer the padding until after all such operations have been performed.
 
-The better approach seems to have a separate instruction *_... fill on, according to Nils' model_*
+The better approach seems to have a separate instruction for time padding, such as a `pause` instruction that halts execution until reaching a given cycle count.
+For instance, an OS can compute the target cycle count by adding a constant worst-case execution time for all history-dependend execution preceeding `pause` (e.g. _fence.t_) to the cycle count of the most recent CLINT timer interrupt, which generally arrives at a history-independent time.
