@@ -51,9 +51,9 @@ Any combination of flags is valid. See <<section-split,Partitioning section>> fo
 == Implementation guidelines
 
 
-=== No timing dependecies
+=== No timing dependencies
 
-One way of enforceing _fence.t_ semantics is to have instructions executing in constant time.
+One way of enforcing _fence.t_ semantics is to have instructions executing in constant time.
 Arithmetic operations (usually excluding division and sometimes multiplication) typically execute in constant time.
 
 The RISC-V extension Zkt mandates execution in in data-independent manner for a given list of instructions.
@@ -80,7 +80,7 @@ An alternative to flushing may be partitioning of state.
 
 What to flush is microarchitecture dependent.
 But usually the biggest threats are with cache and branch predictions mechanisms.
-But flushing can be costly, this is why, in some specific cases, we may prefer to partition ressources instead.
+But flushing can be costly, this is why, in some specific cases, we may prefer to partition resources instead.
 Supporting _fence.t_ may imply microarchitectural changes.
 
 Some interfaces should require a total microarchitectural flush but the cost of it is unmanageable. A partitioning scheme can be used instead.
@@ -112,7 +112,7 @@ The simplest example is the last level cache (LLC), shared by several cores whic
 
 Most microarchitectural state is read-only and should be possible to reset in constant time. But this obviously does not apply to the data cache, which (if it is a write-back cache) must have all dirty lines written back before resetting. This makes the _fence.t_ execution latency inherently history-dependent. There must be a way to prevent this variable latency from being observable.
 
-One way to address this would be to force _fence.t_ to execute in constant time. Alternatively, the privileged software could contain a delay loop that pads execution time to a constant value. However, in practice this sfotware padding may be difficult to do accurately.
+One way to address this would be to force _fence.t_ to execute in constant time. Alternatively, the privileged software could contain a delay loop that pads execution time to a constant value. However, in practice this software padding may be difficult to do accurately.
 
 Nevertheless, there are benefits of decoupling latency padding from flushing. For example, software is likely to perform operations during a context switch that too have a history-dependent latency. An example is an interrupt at a known time, that do some operations before the contex switch.
 It therefore makes sense to defer the padding until after all such operations have been performed.
