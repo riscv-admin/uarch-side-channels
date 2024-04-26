@@ -1,7 +1,7 @@
 # Microarchitectural Side Channels (uSC) SIG Meeting
-April 9, 2024
-10:30am-11:00am PDT
-1:30pm-2:00pm EDT
+April 9, 2024  
+10:30am-11:00am PDT  
+1:30pm-2:00pm EDT  
 7:30pm-8:00pm CEST
 
 
